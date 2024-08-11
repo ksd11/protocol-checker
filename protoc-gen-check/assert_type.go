@@ -20,6 +20,7 @@ func init() {
 	TypeConvertFuncMap["double"] = StringToFloat64
 	TypeConvertFuncMap["float"] = StringToFloat32
 	TypeConvertFuncMap["bool"] = StringToBool
+	TypeConvertFuncMap["string"] = StringToString
 }
 
 // Convert string to int32
@@ -70,4 +71,8 @@ func StringToFloat64(s string) (any, error) {
 
 func StringToBool(s string) (any, error) {
 	return strconv.ParseBool(s)
+}
+
+func StringToString(s string) (any, error) {
+	return s, nil
 }

@@ -28,7 +28,7 @@ func GetBool(val reflect.Value, name string) (bool, bool) {
 	return false, false
 }
 
-func GetFieldPointer[T Number | bool](val reflect.Value, name string) (bool, T) {
+func GetFieldPointer[T any](val reflect.Value, name string) (bool, T) {
 	var zero T
 	field := val.FieldByName(name)
 	if field.IsValid() {

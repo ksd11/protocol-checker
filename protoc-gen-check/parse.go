@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"os"
 	"reflect"
+	"regexp"
+	"strings"
 
 	"github.com/envoyproxy/protoc-gen-validate/templates/shared"
 	"github.com/envoyproxy/protoc-gen-validate/validate"
@@ -117,8 +119,18 @@ func handleBool(value_any any, bool_rules protoreflect.ProtoMessage) (isValidate
 	val := getValue(bool_rules)
 	var rules []RuleFunc[bool]
 
-	rules = addConstRule(val, rules)
+	// rules = addConstRule(val, rules)
+	rules = addRule[bool, bool]("Const", ScalarConst[bool])(val, rules)
 	return validateRules[bool](value_any.(bool), rules)
+}
+
+func handleString(value_any any, bool_rules protoreflect.ProtoMessage) (isValidate bool, msg []string) {
+	val := getValue(bool_rules)
+	var rules []RuleFunc[string]
+
+	rules = addConstRule(val, rules)
+	rules = addLenRule(val, rules)
+	return validateRules(value_any.(string), rules)
 }
 
 func checkRule(f pgs.Field, rawData map[string]string) (isValidate bool, msg []string) {
@@ -165,6 +177,8 @@ func checkRule(f pgs.Field, rawData map[string]string) (isValidate bool, msg []s
 		return handleNumber[float32](value_any, ruleContext.Rules)
 	case "bool":
 		return handleBool(value_any, ruleContext.Rules)
+	case "string":
+		return handleString(value_any, ruleContext.Rules)
 	default:
 		isValidate = false
 		msg = append(msg, fmt.Sprintf("不支持类型 %s", ruleContext.Typ))
@@ -186,13 +200,20 @@ func parseNumber[T Number](numberRules protoreflect.ProtoMessage) []RuleFunc[T] 
 	val := getValue(numberRules)
 	var rules []RuleFunc[T]
 
-	rules = addConstRule(val, rules)
-	rules = addLtRule(val, rules)
-	rules = addLteRule(val, rules)
-	rules = addGtRule(val, rules)
-	rules = addGteRule(val, rules)
-	rules = addInRule(val, rules)
-	rules = addNotInRule(val, rules)
+	rules = addRule[T, T]("Const", ScalarConst)(val, rules)
+	rules = addRule[T, T]("Lt", NumberLt)(val, rules)
+	rules = addRule[T, T]("Lte", NumberLte)(val, rules)
+	rules = addRule[T, T]("Gt", NumberGt)(val, rules)
+	rules = addRule[T, T]("Gte", NumberGte)(val, rules)
+	rules = addRule[T, []T]("In", ScalarIn)(val, rules)
+	rules = addRule[T, []T]("NotIn", ScalarNotIn)(val, rules)
+	// rules = addConstRule(val, rules)
+	// rules = addLtRule(val, rules)
+	// rules = addLteRule(val, rules)
+	// rules = addGtRule(val, rules)
+	// rules = addGteRule(val, rules)
+	// rules = addInRule(val, rules)
+	// rules = addNotInRule(val, rules)
 
 	return rules
 }
@@ -293,11 +314,42 @@ func resolveRules(typ interface{ IsEmbed() bool }, rules *validate.FieldRules) (
 
 // add Rules
 
-func addConstRule[T Number | bool](val reflect.Value, rules []RuleFunc[T]) []RuleFunc[T] {
+// var addRulesFuncMap map[string]func(reflect.Value, []RuleFunc[any]) []RuleFunc[any] = make(map[string]func(reflect.Value, []RuleFunc[any]) []RuleFunc[any])
+
+// func init() {
+// 	addRulesFuncMap["Const"] =
+// }
+
+// AbcDef -> abc_def
+func camelCaseToSnakeCase(s string) string {
+	re := regexp.MustCompile("([a-z0-9])([A-Z])")
+	snake := re.ReplaceAllString(s, "${1}_${2}")
+	return strings.ToLower(snake)
+}
+
+// 添加"校验规则函数"的函数，T代表校验的类型
+type AddRuleFunc[T any] func(reflect.Value, []RuleFunc[T]) []RuleFunc[T]
+
+// addRule("Const", ScalarConst(constVal)) -> AddRuleFunc[T]
+// T: 校验类型
+// V: 字段类型
+func addRule[T any, V any](name string, rule_func_getter RuleFuncGetter[T, V]) AddRuleFunc[T] {
+	sname := camelCaseToSnakeCase(name) // for debug的输出名
+	return func(rval reflect.Value, rules []RuleFunc[T]) []RuleFunc[T] {
+		ok, val := GetFieldPointer[V](rval, name)
+		if ok {
+			debug_rules[sname] = val // for debug
+			return append(rules, rule_func_getter(val))
+		}
+		return rules
+	}
+}
+
+func addConstRule[T Number | bool | string](val reflect.Value, rules []RuleFunc[T]) []RuleFunc[T] {
 	ok, constVal := GetFieldPointer[T](val, "Const")
 	if ok {
 		debug_rules["const"] = constVal // for debug
-		return append(rules, NumberConst(constVal))
+		return append(rules, ScalarConst(constVal))
 	}
 	return rules
 }
@@ -338,20 +390,74 @@ func addGteRule[T Number](val reflect.Value, rules []RuleFunc[T]) []RuleFunc[T] 
 	return rules
 }
 
-func addInRule[T Number](val reflect.Value, rules []RuleFunc[T]) []RuleFunc[T] {
+func addInRule[T Number | string](val reflect.Value, rules []RuleFunc[T]) []RuleFunc[T] {
 	ok, in := GetFieldArray[T](val, "In")
 	if ok {
 		debug_rules["in"] = in // for debug
-		return append(rules, NumberIn(in))
+		return append(rules, ScalarIn(in))
 	}
 	return rules
 }
 
-func addNotInRule[T Number](val reflect.Value, rules []RuleFunc[T]) []RuleFunc[T] {
+func addNotInRule[T Number | string](val reflect.Value, rules []RuleFunc[T]) []RuleFunc[T] {
 	ok, not_in := GetFieldArray[T](val, "NotIn")
 	if ok {
 		debug_rules["not_in"] = not_in // for debug
-		rules = append(rules, NumberNotIn(not_in))
+		rules = append(rules, ScalarNotIn(not_in))
+	}
+	return rules
+}
+
+func addLenRule(val reflect.Value, rules []RuleFunc[string]) []RuleFunc[string] {
+	ok, len := GetFieldPointer[uint64](val, "Len")
+	if ok {
+		debug_rules["len"] = len // for debug
+		return append(rules, StringLen(int(len)))
+	}
+	return rules
+}
+
+func addMinLenRule(val reflect.Value, rules []RuleFunc[string]) []RuleFunc[string] {
+	ok, len := GetFieldPointer[uint64](val, "MinLen")
+	if ok {
+		debug_rules["min_len"] = len // for debug
+		return append(rules, StringMinLen(int(len)))
+	}
+	return rules
+}
+
+func addMaxLenRule(val reflect.Value, rules []RuleFunc[string]) []RuleFunc[string] {
+	ok, len := GetFieldPointer[uint64](val, "MaxLen")
+	if ok {
+		debug_rules["max_len"] = len // for debug
+		return append(rules, StringMaxLen(int(len)))
+	}
+	return rules
+}
+
+func addLenBytesRule(val reflect.Value, rules []RuleFunc[string]) []RuleFunc[string] {
+	ok, len := GetFieldPointer[uint64](val, "LenBytes")
+	if ok {
+		debug_rules["len_bytes"] = len // for debug
+		return append(rules, StringLenBytes(int(len)))
+	}
+	return rules
+}
+
+func addMinBytesRule(val reflect.Value, rules []RuleFunc[string]) []RuleFunc[string] {
+	ok, len := GetFieldPointer[uint64](val, "MinBytes")
+	if ok {
+		debug_rules["min_bytes"] = len // for debug
+		return append(rules, StringMinBytes(int(len)))
+	}
+	return rules
+}
+
+func addMaxBytesRule(val reflect.Value, rules []RuleFunc[string]) []RuleFunc[string] {
+	ok, len := GetFieldPointer[uint64](val, "MaxBytes")
+	if ok {
+		debug_rules["max_bytes"] = len // for debug
+		return append(rules, StringMaxBytes(int(len)))
 	}
 	return rules
 }
