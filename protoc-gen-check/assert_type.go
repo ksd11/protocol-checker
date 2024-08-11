@@ -22,6 +22,7 @@ func init() {
 	TypeConvertFuncMap["bool"] = StringToBool
 	TypeConvertFuncMap["string"] = StringToString
 	TypeConvertFuncMap["bytes"] = StringToBytes
+	TypeConvertFuncMap["enum"] = stringToEnum
 }
 
 // Convert string to int32
@@ -80,4 +81,8 @@ func StringToString(s string) (any, error) {
 
 func StringToBytes(s string) (any, error) {
 	return []byte(s), nil
+}
+
+func stringToEnum(s string) (any, error) {
+	return StringToInt32(s)
 }

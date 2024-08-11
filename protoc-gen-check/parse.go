@@ -123,8 +123,8 @@ func handleBool(value_any any, bool_rules protoreflect.ProtoMessage) (isValidate
 	return validateRules[bool](value_any.(bool), rules)
 }
 
-func handleString(value_any any, bool_rules protoreflect.ProtoMessage) (isValidate bool, msg []string) {
-	val := getValue(bool_rules)
+func handleString(value_any any, string_rules protoreflect.ProtoMessage) (isValidate bool, msg []string) {
+	val := getValue(string_rules)
 	var rules []RuleFunc[string]
 
 	rules = addRule[string, string]("Const", ScalarConst)(val, rules)
@@ -144,10 +144,23 @@ func handleString(value_any any, bool_rules protoreflect.ProtoMessage) (isValida
 	return validateRules(value_any.(string), rules)
 }
 
-func handleBytes(value_any any, bool_rules protoreflect.ProtoMessage) (isValidate bool, msg []string) {
+func handleBytes(value_any any, bytes_rules protoreflect.ProtoMessage) (isValidate bool, msg []string) {
 	isValidate = false
 	msg = append(msg, "bytes类型校验暂不支持")
 	return
+}
+
+func handleEnum(value_any any, enum_rules protoreflect.ProtoMessage, enum_values_number []int32) (isValidate bool, msg []string) {
+	val := getValue(enum_rules)
+	var rules []RuleFunc[int32]
+
+	// 方便起见，给全局enum有效值赋值
+	GLOBAL_ENUM_VALILD_VALUES = enum_values_number
+	rules = addRule[int32, int32]("Const", ScalarConst)(val, rules)
+	rules = addDefinedOnlyRule(val, rules)
+	rules = addInRule(val, rules)
+	rules = addNotInRule(val, rules)
+	return validateRules(value_any.(int32), rules)
 }
 
 func checkRule(f pgs.Field, rawData map[string]string) (isValidate bool, msg []string) {
@@ -210,6 +223,14 @@ func checkRule(f pgs.Field, rawData map[string]string) (isValidate bool, msg []s
 		return handleString(value_any, ruleContext.Rules)
 	case "bytes":
 		return handleBytes(value_any, ruleContext.Rules)
+	case "enum":
+		enum_values := f.Type().Enum().Values()
+		var enum_values_number []int32
+		for _, enum_value := range enum_values {
+			// fmt.Fprint(os.Stderr, enum_value.Value(), " ")
+			enum_values_number = append(enum_values_number, enum_value.Value())
+		}
+		return handleEnum(value_any, ruleContext.Rules, enum_values_number)
 	default:
 		isValidate = false
 		msg = append(msg, fmt.Sprintf("不支持类型 %s", ruleContext.Typ))
@@ -312,25 +333,25 @@ func resolveRules(typ interface{ IsEmbed() bool }, rules *validate.FieldRules) (
 		ruleType, rule, wrapped = "bytes", rules.GetBytes(), typ.IsEmbed()
 	case pgs.EnumT:
 		ruleType, rule, wrapped = "enum", rules.GetEnum(), false
-		// case *validate.FieldRules_Repeated:
-		// 	ruleType, rule, wrapped = "repeated", r.Repeated, false
-		// case *validate.FieldRules_Map:
-		// 	ruleType, rule, wrapped = "map", r.Map, false
-		// case *validate.FieldRules_Any:
-		// 	ruleType, rule, wrapped = "any", r.Any, false
-		// case *validate.FieldRules_Duration:
-		// 	ruleType, rule, wrapped = "duration", r.Duration, false
-		// case *validate.FieldRules_Timestamp:
-		// 	ruleType, rule, wrapped = "timestamp", r.Timestamp, false
-	_:
-		if ft, ok := typ.(pgs.FieldType); ok && ft.IsRepeated() {
-			return "repeated", &validate.RepeatedRules{}, rules.Message, false
-		} else if ok && ft.IsMap() && ft.Element().IsEmbed() {
-			return "map", &validate.MapRules{}, rules.Message, false
-		} else if typ.IsEmbed() {
-			return "message", rules.GetMessage(), rules.GetMessage(), false
-		}
-		return "none", nil, nil, false
+	// case *validate.FieldRules_Repeated:
+	// 	ruleType, rule, wrapped = "repeated", r.Repeated, false
+	// case *validate.FieldRules_Map:
+	// 	ruleType, rule, wrapped = "map", r.Map, false
+	// case *validate.FieldRules_Any:
+	// 	ruleType, rule, wrapped = "any", r.Any, false
+	// case *validate.FieldRules_Duration:
+	// 	ruleType, rule, wrapped = "duration", r.Duration, false
+	// case *validate.FieldRules_Timestamp:
+	// 	ruleType, rule, wrapped = "timestamp", r.Timestamp, false
+	// case nil:
+	// 	if ft, ok := typ.(pgs.FieldType); ok && ft.IsRepeated() {
+	// 		return "repeated", &validate.RepeatedRules{}, rules.Message, false
+	// 	} else if ok && ft.IsMap() && ft.Element().IsEmbed() {
+	// 		return "map", &validate.MapRules{}, rules.Message, false
+	// 	} else if typ.IsEmbed() {
+	// 		return "message", rules.GetMessage(), rules.GetMessage(), false
+	// 	}
+	// 	return "none", nil, nil, false
 	default:
 		ruleType, rule, wrapped = "error", nil, false
 	}
@@ -386,5 +407,11 @@ func addNotInRule[T Number | string](val reflect.Value, rules []RuleFunc[T]) []R
 		debug_rules["not_in"] = not_in // for debug
 		rules = append(rules, ScalarNotIn(not_in))
 	}
+	return rules
+}
+
+func addDefinedOnlyRule(val reflect.Value, rules []RuleFunc[int32]) []RuleFunc[int32] {
+	debug_rules["defined_in"] = "" // for debug
+	rules = append(rules, EnumDefinedOnly())
 	return rules
 }

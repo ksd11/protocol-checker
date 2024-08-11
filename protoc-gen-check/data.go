@@ -26,22 +26,23 @@ func OutputOneFieldValidateResult(name string, isValidate bool, msg []string) {
 var simpleJsonData map[string]string
 
 func init() {
-	jsonStr := `{"float_val": "0.3"
-				, "double_val": "0.05"
-				, "int32_val": "3"
-				, "int64_val": ""
-				, "uint32_val": "5"
-				, "uint64_val": "3"
-				, "sint32_val": "3"
-				, "sint64_val": "3"
-				, "fixed32_val": "3"
-				, "fixed64_val": "3"
-				, "sfixed32_val": "3"
-				, "sfixed64_val": "3"
-				, "bool_val": "true"
-				, "string_val": "aaaaaaaaaaaaa"
-				, "bytes_val": "11111111"}`
-	// jsonStr := `{"bytes_val": "11111111"}`
+	// jsonStr := `{"float_val": "0.3"
+	// 			, "double_val": "0.05"
+	// 			, "int32_val": "3"
+	// 			, "int64_val": ""
+	// 			, "uint32_val": "5"
+	// 			, "uint64_val": "3"
+	// 			, "sint32_val": "3"
+	// 			, "sint64_val": "3"
+	// 			, "fixed32_val": "3"
+	// 			, "fixed64_val": "3"
+	// 			, "sfixed32_val": "3"
+	// 			, "sfixed64_val": "3"
+	// 			, "bool_val": "true"
+	// 			, "string_val": "aaaaaaaaaaaaa"
+	// 			, "bytes_val": "11111111"
+	// 			, "verify_type": "1"}`
+	jsonStr := `{"verify_type": "1"}`
 	err := json.Unmarshal([]byte(jsonStr), &simpleJsonData)
 	if err != nil {
 		fmt.Println("Error:", err)

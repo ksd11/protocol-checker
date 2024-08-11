@@ -14,50 +14,6 @@ type Number interface {
 type RuleFuncGetter[T any, V any] func(V) RuleFunc[T]
 type RuleFunc[T any] func(T) (bool, string)
 
-// 判断数值是否在指定范围内 [left, right]
-func NumberRangeLR[T Number](left, right T) RuleFunc[T] {
-	return func(val T) (bool, string) {
-		if val >= left && val <= right {
-			return true, ""
-		}
-		message := fmt.Sprintf("数值 %v 不在指定范围[%v, %v]", val, left, right)
-		return false, message
-	}
-}
-
-// 判断数值是否在指定范围内 [left, right)
-func NumberRangeL[T Number](left, right T) RuleFunc[T] {
-	return func(val T) (bool, string) {
-		if val >= left && val <= right {
-			return true, ""
-		}
-		message := fmt.Sprintf("数值 %v 不在指定范围[%v, %v)", val, left, right)
-		return false, message
-	}
-}
-
-// 判断数值是否在指定范围内 (left, right]
-func NumberRangeR[T Number](left, right T) RuleFunc[T] {
-	return func(val T) (bool, string) {
-		if val >= left && val <= right {
-			return true, ""
-		}
-		message := fmt.Sprintf("数值 %v 不在指定范围(%v, %v]", val, left, right)
-		return false, message
-	}
-}
-
-// 判断数值是否在指定范围内 (left, right)
-func NumberRange[T Number](left, right T) RuleFunc[T] {
-	return func(val T) (bool, string) {
-		if val >= left && val <= right {
-			return true, ""
-		}
-		message := fmt.Sprintf("数值 %v 不在指定范围(%v, %v)", val, left, right)
-		return false, message
-	}
-}
-
 func NumberLt[T Number](right T) RuleFunc[T] {
 	return func(val T) (bool, string) {
 		if val < right {
@@ -249,6 +205,18 @@ func StringNotContains(substr string) RuleFunc[string] {
 			return true, ""
 		}
 		message := fmt.Sprintf("字符串 %v 不应包含 %v", val, substr)
+		return false, message
+	}
+}
+
+var GLOBAL_ENUM_VALILD_VALUES []int32
+
+func EnumDefinedOnly() RuleFunc[int32] {
+	return func(val int32) (bool, string) {
+		if Contains(GLOBAL_ENUM_VALILD_VALUES, val) {
+			return true, ""
+		}
+		message := fmt.Sprintf("枚举值 %v 不合法: %v", val, GLOBAL_ENUM_VALILD_VALUES)
 		return false, message
 	}
 }
