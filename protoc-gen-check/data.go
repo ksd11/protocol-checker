@@ -37,7 +37,8 @@ func init() {
 				, "fixed32_val": "3"
 				, "fixed64_val": "3"
 				, "sfixed32_val": "3"
-				, "sfixed64_val": "3"}`
+				, "sfixed64_val": "3"
+				, "bool_val": "true"}`
 	err := json.Unmarshal([]byte(jsonStr), &simpleJsonData)
 	if err != nil {
 		fmt.Println("Error:", err)

@@ -123,7 +123,7 @@ func NumberNotIn[T Number](right []T) RuleFunc[T] {
 	}
 }
 
-func NumberConst[T Number](right T) RuleFunc[T] {
+func NumberConst[T Number | bool](right T) RuleFunc[T] {
 	return func(val T) (bool, string) {
 		if val == right {
 			return true, ""

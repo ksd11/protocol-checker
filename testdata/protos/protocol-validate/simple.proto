@@ -23,5 +23,5 @@ message Protocol {
 //   required fixed64 fixed64_val = 10 [(validate.rules).fixed64.const = 10];
 //   required sfixed32 sfixed32_val = 11 [(validate.rules).sfixed32.in = 10];
 //   required sfixed64 sfixed64_val = 12 [(validate.rules).sfixed64.in = 10];
-optional bool bool_val = 13 [(validate.rules).bool.const = true];
+optional bool bool_val = 13 [(validate.rules).bool.const = false];
 }

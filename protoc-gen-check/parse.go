@@ -113,6 +113,14 @@ func handleNumber[T Number](value_any any, rules protoreflect.ProtoMessage) (isV
 	return validateRules[T](value_any.(T), parsedRules)
 }
 
+func handleBool(value_any any, bool_rules protoreflect.ProtoMessage) (isValidate bool, msg []string) {
+	val := getValue(bool_rules)
+	var rules []RuleFunc[bool]
+
+	rules = addConstRule(val, rules)
+	return validateRules[bool](value_any.(bool), rules)
+}
+
 func checkRule(f pgs.Field, rawData map[string]string) (isValidate bool, msg []string) {
 	isValidate = true
 	msg = []string{}
@@ -155,6 +163,8 @@ func checkRule(f pgs.Field, rawData map[string]string) (isValidate bool, msg []s
 		return handleNumber[float64](value_any, ruleContext.Rules)
 	case "float":
 		return handleNumber[float32](value_any, ruleContext.Rules)
+	case "bool":
+		return handleBool(value_any, ruleContext.Rules)
 	default:
 		isValidate = false
 		msg = append(msg, fmt.Sprintf("不支持类型 %s", ruleContext.Typ))
@@ -174,73 +184,16 @@ func getValue(numberRules protoreflect.ProtoMessage) reflect.Value {
 // 返回一堆验证函数
 func parseNumber[T Number](numberRules protoreflect.ProtoMessage) []RuleFunc[T] {
 	val := getValue(numberRules)
-
-	var ok bool
 	var rules []RuleFunc[T]
 
-	ok, constVal := GetFieldPointer[T](val, "Const")
-	if ok {
-		rules = append(rules, NumberConst(constVal))
-		debug_rules["const"] = constVal // for debug
-	}
+	rules = addConstRule(val, rules)
+	rules = addLtRule(val, rules)
+	rules = addLteRule(val, rules)
+	rules = addGtRule(val, rules)
+	rules = addGteRule(val, rules)
+	rules = addInRule(val, rules)
+	rules = addNotInRule(val, rules)
 
-	lt, ltVal := GetFieldPointer[T](val, "Lt")
-	lte, lteVal := GetFieldPointer[T](val, "Lte")
-	gt, gtVal := GetFieldPointer[T](val, "Gt")
-	gte, gteVal := GetFieldPointer[T](val, "Gte")
-
-	if (lt || lte) && (gt || gte) {
-		left := "["
-		left_value := gteVal
-		if gt {
-			left = "("
-			left_value = gtVal
-		}
-		right := "]"
-		right_value := lteVal
-		if lt {
-			right = ")"
-			right_value = ltVal
-		}
-		if left == "(" && right == ")" {
-			rules = append(rules, NumberRange(left_value, right_value))
-		} else if left == "(" && right == "]" {
-			rules = append(rules, NumberRangeR(left_value, right_value))
-		} else if left == "[" && right == ")" {
-			rules = append(rules, NumberRangeL(left_value, right_value))
-		} else {
-			rules = append(rules, NumberRangeLR(left_value, right_value))
-		}
-		debug_rules["range"] = fmt.Sprintf("%v%v,%v%v", left, left_value, right_value, right) // for debug
-	} else {
-		if lt {
-			rules = append(rules, NumberLt(ltVal))
-			debug_rules["lt"] = ltVal // for debug
-		}
-		if lte {
-			rules = append(rules, NumberLte(lteVal))
-			debug_rules["lte"] = lteVal // for debug
-		}
-		if gt {
-			rules = append(rules, NumberGt(gtVal))
-			debug_rules["gt"] = gtVal // for debug
-		}
-		if gte {
-			rules = append(rules, NumberGte(gteVal))
-			debug_rules["gte"] = gteVal // for debug
-		}
-	}
-
-	ok, in := GetFieldArray[T](val, "In")
-	if ok {
-		rules = append(rules, NumberIn(in))
-		debug_rules["in"] = in // for debug
-	}
-	ok, not_in := GetFieldArray[T](val, "NotIn")
-	if ok {
-		rules = append(rules, NumberNotIn(in))
-		debug_rules["not_in"] = not_in // for debug
-	}
 	return rules
 }
 
@@ -336,4 +289,69 @@ func resolveRules(typ interface{ IsEmbed() bool }, rules *validate.FieldRules) (
 	}
 
 	return ruleType, rule, rules.Message, wrapped
+}
+
+// add Rules
+
+func addConstRule[T Number | bool](val reflect.Value, rules []RuleFunc[T]) []RuleFunc[T] {
+	ok, constVal := GetFieldPointer[T](val, "Const")
+	if ok {
+		debug_rules["const"] = constVal // for debug
+		return append(rules, NumberConst(constVal))
+	}
+	return rules
+}
+
+func addLtRule[T Number](val reflect.Value, rules []RuleFunc[T]) []RuleFunc[T] {
+	lt, ltVal := GetFieldPointer[T](val, "Lt")
+	if lt {
+		debug_rules["lt"] = ltVal // for debug
+		return append(rules, NumberLt(ltVal))
+	}
+	return rules
+}
+
+func addLteRule[T Number](val reflect.Value, rules []RuleFunc[T]) []RuleFunc[T] {
+	lte, lteVal := GetFieldPointer[T](val, "Lte")
+	if lte {
+		debug_rules["lte"] = lteVal // for debug
+		return append(rules, NumberLte(lteVal))
+	}
+	return rules
+}
+
+func addGtRule[T Number](val reflect.Value, rules []RuleFunc[T]) []RuleFunc[T] {
+	gt, gtVal := GetFieldPointer[T](val, "Gt")
+	if gt {
+		debug_rules["gt"] = gtVal // for debug
+		return append(rules, NumberGt(gtVal))
+	}
+	return rules
+}
+
+func addGteRule[T Number](val reflect.Value, rules []RuleFunc[T]) []RuleFunc[T] {
+	gte, gteVal := GetFieldPointer[T](val, "Gte")
+	if gte {
+		debug_rules["gte"] = gteVal // for debug
+		return append(rules, NumberGte(gteVal))
+	}
+	return rules
+}
+
+func addInRule[T Number](val reflect.Value, rules []RuleFunc[T]) []RuleFunc[T] {
+	ok, in := GetFieldArray[T](val, "In")
+	if ok {
+		debug_rules["in"] = in // for debug
+		return append(rules, NumberIn(in))
+	}
+	return rules
+}
+
+func addNotInRule[T Number](val reflect.Value, rules []RuleFunc[T]) []RuleFunc[T] {
+	ok, not_in := GetFieldArray[T](val, "NotIn")
+	if ok {
+		debug_rules["not_in"] = not_in // for debug
+		rules = append(rules, NumberNotIn(not_in))
+	}
+	return rules
 }
