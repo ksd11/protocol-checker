@@ -41,6 +41,7 @@ func init() {
 				, "bool_val": "true"
 				, "string_val": "aaaaaaaaaaaaa"
 				, "bytes_val": "11111111"}`
+	// jsonStr := `{"bytes_val": "11111111"}`
 	err := json.Unmarshal([]byte(jsonStr), &simpleJsonData)
 	if err != nil {
 		fmt.Println("Error:", err)

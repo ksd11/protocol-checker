@@ -29,5 +29,10 @@ message Protocol {
     pattern: "^a{10,}$",
 
   }];
-  required bytes bytes_val = 15;
+  required bytes bytes_val = 15 [(validate.rules).bytes = {
+    const: "a",
+    min_len : 10,
+    pattern: "^a{10,}$",
+
+  }];
 }

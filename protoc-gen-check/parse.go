@@ -152,6 +152,18 @@ func checkRule(f pgs.Field, rawData map[string]string) (isValidate bool, msg []s
 		isValidate = false
 		msg = append(msg, err.Error())
 		return
+	} else if reflect.ValueOf(ruleContext.Rules).IsNil() {
+		// https://www.cnblogs.com/mfrank/p/16831877.html 不能直接写成Nil比较
+		// 无validate校验，跳过。但是仍需要校验类型
+		_, err := TypeConvertFuncMap[ruleContext.Typ](rawData[f.Name().String()])
+		if err != nil {
+			isValidate = false
+			msg = append(msg, err.Error())
+			return
+		}
+		debug_field_value = fmt.Sprintf("%v", rawData[f.Name().String()])
+		return
+
 	}
 
 	// ignore_empty
@@ -257,50 +269,52 @@ func rulesContext(f pgs.Field) (out shared.RuleContext, err error) {
 }
 
 func resolveRules(typ interface{ IsEmbed() bool }, rules *validate.FieldRules) (ruleType string, rule proto.Message, messageRule *validate.MessageRules, wrapped bool) {
-	switch r := rules.GetType().(type) {
-	case *validate.FieldRules_Float:
-		ruleType, rule, wrapped = "float", r.Float, typ.IsEmbed()
-	case *validate.FieldRules_Double:
-		ruleType, rule, wrapped = "double", r.Double, typ.IsEmbed()
-	case *validate.FieldRules_Int32:
-		ruleType, rule, wrapped = "int32", r.Int32, typ.IsEmbed()
-	case *validate.FieldRules_Int64:
-		ruleType, rule, wrapped = "int64", r.Int64, typ.IsEmbed()
-	case *validate.FieldRules_Uint32:
-		ruleType, rule, wrapped = "uint32", r.Uint32, typ.IsEmbed()
-	case *validate.FieldRules_Uint64:
-		ruleType, rule, wrapped = "uint64", r.Uint64, typ.IsEmbed()
-	case *validate.FieldRules_Sint32:
-		ruleType, rule, wrapped = "sint32", r.Sint32, false
-	case *validate.FieldRules_Sint64:
-		ruleType, rule, wrapped = "sint64", r.Sint64, false
-	case *validate.FieldRules_Fixed32:
-		ruleType, rule, wrapped = "fixed32", r.Fixed32, false
-	case *validate.FieldRules_Fixed64:
-		ruleType, rule, wrapped = "fixed64", r.Fixed64, false
-	case *validate.FieldRules_Sfixed32:
-		ruleType, rule, wrapped = "sfixed32", r.Sfixed32, false
-	case *validate.FieldRules_Sfixed64:
-		ruleType, rule, wrapped = "sfixed64", r.Sfixed64, false
-	case *validate.FieldRules_Bool:
-		ruleType, rule, wrapped = "bool", r.Bool, typ.IsEmbed()
-	case *validate.FieldRules_String_:
-		ruleType, rule, wrapped = "string", r.String_, typ.IsEmbed()
-	case *validate.FieldRules_Bytes:
-		ruleType, rule, wrapped = "bytes", r.Bytes, typ.IsEmbed()
-	case *validate.FieldRules_Enum:
-		ruleType, rule, wrapped = "enum", r.Enum, false
-	case *validate.FieldRules_Repeated:
-		ruleType, rule, wrapped = "repeated", r.Repeated, false
-	case *validate.FieldRules_Map:
-		ruleType, rule, wrapped = "map", r.Map, false
-	case *validate.FieldRules_Any:
-		ruleType, rule, wrapped = "any", r.Any, false
-	case *validate.FieldRules_Duration:
-		ruleType, rule, wrapped = "duration", r.Duration, false
-	case *validate.FieldRules_Timestamp:
-		ruleType, rule, wrapped = "timestamp", r.Timestamp, false
-	case nil:
+	fmt.Fprintln(os.Stderr, typ.(pgs.FieldType).ProtoType().String())
+	// r := rules.GetType().(type)
+	switch typ.(pgs.FieldType).ProtoType() {
+	case pgs.FloatT:
+		ruleType, rule, wrapped = "float", rules.GetFloat(), typ.IsEmbed()
+	case pgs.DoubleT:
+		ruleType, rule, wrapped = "double", rules.GetDouble(), typ.IsEmbed()
+	case pgs.Int32T:
+		ruleType, rule, wrapped = "int32", rules.GetInt32(), typ.IsEmbed()
+	case pgs.Int64T:
+		ruleType, rule, wrapped = "int64", rules.GetInt64(), typ.IsEmbed()
+	case pgs.UInt32T:
+		ruleType, rule, wrapped = "uint32", rules.GetUint32(), typ.IsEmbed()
+	case pgs.UInt64T:
+		ruleType, rule, wrapped = "uint64", rules.GetUint64(), typ.IsEmbed()
+	case pgs.SInt32:
+		ruleType, rule, wrapped = "sint32", rules.GetSint32(), false
+	case pgs.SInt64:
+		ruleType, rule, wrapped = "sint64", rules.GetSint64(), false
+	case pgs.Fixed32T:
+		ruleType, rule, wrapped = "fixed32", rules.GetFixed32(), false
+	case pgs.Fixed64T:
+		ruleType, rule, wrapped = "fixed64", rules.GetFixed64(), false
+	case pgs.SFixed32:
+		ruleType, rule, wrapped = "sfixed32", rules.GetSfixed32(), false
+	case pgs.SFixed64:
+		ruleType, rule, wrapped = "sfixed64", rules.GetSfixed64(), false
+	case pgs.BoolT:
+		ruleType, rule, wrapped = "bool", rules.GetBool(), typ.IsEmbed()
+	case pgs.StringT:
+		ruleType, rule, wrapped = "string", rules.GetString_(), typ.IsEmbed()
+	case pgs.BytesT:
+		ruleType, rule, wrapped = "bytes", rules.GetBytes(), typ.IsEmbed()
+	case pgs.EnumT:
+		ruleType, rule, wrapped = "enum", rules.GetEnum(), false
+		// case *validate.FieldRules_Repeated:
+		// 	ruleType, rule, wrapped = "repeated", r.Repeated, false
+		// case *validate.FieldRules_Map:
+		// 	ruleType, rule, wrapped = "map", r.Map, false
+		// case *validate.FieldRules_Any:
+		// 	ruleType, rule, wrapped = "any", r.Any, false
+		// case *validate.FieldRules_Duration:
+		// 	ruleType, rule, wrapped = "duration", r.Duration, false
+		// case *validate.FieldRules_Timestamp:
+		// 	ruleType, rule, wrapped = "timestamp", r.Timestamp, false
+	_:
 		if ft, ok := typ.(pgs.FieldType); ok && ft.IsRepeated() {
 			return "repeated", &validate.RepeatedRules{}, rules.Message, false
 		} else if ok && ft.IsMap() && ft.Element().IsEmbed() {

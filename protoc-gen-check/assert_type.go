@@ -21,6 +21,7 @@ func init() {
 	TypeConvertFuncMap["float"] = StringToFloat32
 	TypeConvertFuncMap["bool"] = StringToBool
 	TypeConvertFuncMap["string"] = StringToString
+	TypeConvertFuncMap["bytes"] = StringToBytes
 }
 
 // Convert string to int32
@@ -75,4 +76,8 @@ func StringToBool(s string) (any, error) {
 
 func StringToString(s string) (any, error) {
 	return s, nil
+}
+
+func StringToBytes(s string) (any, error) {
+	return []byte(s), nil
 }
