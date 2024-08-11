@@ -23,6 +23,11 @@ message Protocol {
 //   required fixed64 fixed64_val = 10 [(validate.rules).fixed64.const = 10];
 //   required sfixed32 sfixed32_val = 11 [(validate.rules).sfixed32.in = 10];
   required sfixed64 sfixed64_val = 12 [(validate.rules).sfixed64.in = 10];
-optional bool bool_val = 13 [(validate.rules).bool.const = false];
-required string string_val = 14 [(validate.rules).string.min_len = 10];
+  optional bool bool_val = 13 [(validate.rules).bool.const = false];
+  required string string_val = 14 [(validate.rules).string = {
+    min_len : 10,
+    pattern: "^a{10,}$",
+
+  }];
+  required bytes bytes_val = 15;
 }

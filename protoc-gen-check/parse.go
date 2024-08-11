@@ -119,8 +119,7 @@ func handleBool(value_any any, bool_rules protoreflect.ProtoMessage) (isValidate
 	val := getValue(bool_rules)
 	var rules []RuleFunc[bool]
 
-	// rules = addConstRule(val, rules)
-	rules = addRule[bool, bool]("Const", ScalarConst[bool])(val, rules)
+	rules = addRule[bool, bool]("Const", ScalarConst)(val, rules)
 	return validateRules[bool](value_any.(bool), rules)
 }
 
@@ -128,8 +127,20 @@ func handleString(value_any any, bool_rules protoreflect.ProtoMessage) (isValida
 	val := getValue(bool_rules)
 	var rules []RuleFunc[string]
 
-	rules = addConstRule(val, rules)
-	rules = addLenRule(val, rules)
+	rules = addRule[string, string]("Const", ScalarConst)(val, rules)
+	rules = addRule[string, uint64]("Len", StringLen)(val, rules)
+	rules = addRule[string, uint64]("MinLen", StringMinLen)(val, rules)
+	rules = addRule[string, uint64]("MaxLen", StringMaxLen)(val, rules)
+	rules = addRule[string, uint64]("LenBytes", StringLenBytes)(val, rules)
+	rules = addRule[string, uint64]("MinBytes", StringMinBytes)(val, rules)
+	rules = addRule[string, uint64]("MaxBytes", StringMaxBytes)(val, rules)
+	rules = addRule[string, string]("Pattern", StringPattern)(val, rules)
+	rules = addRule[string, string]("Prefix", StringPrefix)(val, rules)
+	rules = addRule[string, string]("Suffix", StringSuffix)(val, rules)
+	rules = addRule[string, string]("Contains", StringContains)(val, rules)
+	rules = addRule[string, string]("NotContains", StringNotContains)(val, rules)
+	rules = addInRule(val, rules)
+	rules = addNotInRule(val, rules)
 	return validateRules(value_any.(string), rules)
 }
 
@@ -205,15 +216,8 @@ func parseNumber[T Number](numberRules protoreflect.ProtoMessage) []RuleFunc[T] 
 	rules = addRule[T, T]("Lte", NumberLte)(val, rules)
 	rules = addRule[T, T]("Gt", NumberGt)(val, rules)
 	rules = addRule[T, T]("Gte", NumberGte)(val, rules)
-	rules = addRule[T, []T]("In", ScalarIn)(val, rules)
-	rules = addRule[T, []T]("NotIn", ScalarNotIn)(val, rules)
-	// rules = addConstRule(val, rules)
-	// rules = addLtRule(val, rules)
-	// rules = addLteRule(val, rules)
-	// rules = addGtRule(val, rules)
-	// rules = addGteRule(val, rules)
-	// rules = addInRule(val, rules)
-	// rules = addNotInRule(val, rules)
+	rules = addInRule(val, rules)
+	rules = addNotInRule(val, rules)
 
 	return rules
 }
@@ -345,51 +349,6 @@ func addRule[T any, V any](name string, rule_func_getter RuleFuncGetter[T, V]) A
 	}
 }
 
-func addConstRule[T Number | bool | string](val reflect.Value, rules []RuleFunc[T]) []RuleFunc[T] {
-	ok, constVal := GetFieldPointer[T](val, "Const")
-	if ok {
-		debug_rules["const"] = constVal // for debug
-		return append(rules, ScalarConst(constVal))
-	}
-	return rules
-}
-
-func addLtRule[T Number](val reflect.Value, rules []RuleFunc[T]) []RuleFunc[T] {
-	lt, ltVal := GetFieldPointer[T](val, "Lt")
-	if lt {
-		debug_rules["lt"] = ltVal // for debug
-		return append(rules, NumberLt(ltVal))
-	}
-	return rules
-}
-
-func addLteRule[T Number](val reflect.Value, rules []RuleFunc[T]) []RuleFunc[T] {
-	lte, lteVal := GetFieldPointer[T](val, "Lte")
-	if lte {
-		debug_rules["lte"] = lteVal // for debug
-		return append(rules, NumberLte(lteVal))
-	}
-	return rules
-}
-
-func addGtRule[T Number](val reflect.Value, rules []RuleFunc[T]) []RuleFunc[T] {
-	gt, gtVal := GetFieldPointer[T](val, "Gt")
-	if gt {
-		debug_rules["gt"] = gtVal // for debug
-		return append(rules, NumberGt(gtVal))
-	}
-	return rules
-}
-
-func addGteRule[T Number](val reflect.Value, rules []RuleFunc[T]) []RuleFunc[T] {
-	gte, gteVal := GetFieldPointer[T](val, "Gte")
-	if gte {
-		debug_rules["gte"] = gteVal // for debug
-		return append(rules, NumberGte(gteVal))
-	}
-	return rules
-}
-
 func addInRule[T Number | string](val reflect.Value, rules []RuleFunc[T]) []RuleFunc[T] {
 	ok, in := GetFieldArray[T](val, "In")
 	if ok {
@@ -404,60 +363,6 @@ func addNotInRule[T Number | string](val reflect.Value, rules []RuleFunc[T]) []R
 	if ok {
 		debug_rules["not_in"] = not_in // for debug
 		rules = append(rules, ScalarNotIn(not_in))
-	}
-	return rules
-}
-
-func addLenRule(val reflect.Value, rules []RuleFunc[string]) []RuleFunc[string] {
-	ok, len := GetFieldPointer[uint64](val, "Len")
-	if ok {
-		debug_rules["len"] = len // for debug
-		return append(rules, StringLen(int(len)))
-	}
-	return rules
-}
-
-func addMinLenRule(val reflect.Value, rules []RuleFunc[string]) []RuleFunc[string] {
-	ok, len := GetFieldPointer[uint64](val, "MinLen")
-	if ok {
-		debug_rules["min_len"] = len // for debug
-		return append(rules, StringMinLen(int(len)))
-	}
-	return rules
-}
-
-func addMaxLenRule(val reflect.Value, rules []RuleFunc[string]) []RuleFunc[string] {
-	ok, len := GetFieldPointer[uint64](val, "MaxLen")
-	if ok {
-		debug_rules["max_len"] = len // for debug
-		return append(rules, StringMaxLen(int(len)))
-	}
-	return rules
-}
-
-func addLenBytesRule(val reflect.Value, rules []RuleFunc[string]) []RuleFunc[string] {
-	ok, len := GetFieldPointer[uint64](val, "LenBytes")
-	if ok {
-		debug_rules["len_bytes"] = len // for debug
-		return append(rules, StringLenBytes(int(len)))
-	}
-	return rules
-}
-
-func addMinBytesRule(val reflect.Value, rules []RuleFunc[string]) []RuleFunc[string] {
-	ok, len := GetFieldPointer[uint64](val, "MinBytes")
-	if ok {
-		debug_rules["min_bytes"] = len // for debug
-		return append(rules, StringMinBytes(int(len)))
-	}
-	return rules
-}
-
-func addMaxBytesRule(val reflect.Value, rules []RuleFunc[string]) []RuleFunc[string] {
-	ok, len := GetFieldPointer[uint64](val, "MaxBytes")
-	if ok {
-		debug_rules["max_bytes"] = len // for debug
-		return append(rules, StringMaxBytes(int(len)))
 	}
 	return rules
 }

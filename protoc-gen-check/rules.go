@@ -138,9 +138,9 @@ func ScalarConst[T Number | bool | string](right T) RuleFunc[T] {
 	}
 }
 
-func StringLen(right int) RuleFunc[string] {
+func StringLen(right uint64) RuleFunc[string] {
 	return func(val string) (bool, string) {
-		if len(val) == right {
+		if uint64(len(val)) == right {
 			return true, ""
 		}
 		message := fmt.Sprintf("字符串 %v 长度必须等于%v", val, right)
@@ -148,9 +148,9 @@ func StringLen(right int) RuleFunc[string] {
 	}
 }
 
-func StringMinLen(right int) RuleFunc[string] {
+func StringMinLen(right uint64) RuleFunc[string] {
 	return func(val string) (bool, string) {
-		if len(val) >= right {
+		if uint64(len(val)) >= right {
 			return true, ""
 		}
 		message := fmt.Sprintf("字符串 %v 长度必须>=%v", val, right)
@@ -158,9 +158,9 @@ func StringMinLen(right int) RuleFunc[string] {
 	}
 }
 
-func StringMaxLen(right int) RuleFunc[string] {
+func StringMaxLen(right uint64) RuleFunc[string] {
 	return func(val string) (bool, string) {
-		if len(val) <= right {
+		if uint64(len(val)) <= right {
 			return true, ""
 		}
 		message := fmt.Sprintf("字符串 %v 长度必须<=%v", val, right)
@@ -168,9 +168,9 @@ func StringMaxLen(right int) RuleFunc[string] {
 	}
 }
 
-func StringLenBytes(right int) RuleFunc[string] {
+func StringLenBytes(right uint64) RuleFunc[string] {
 	return func(val string) (bool, string) {
-		if len([]byte(val)) == right {
+		if uint64(len([]byte(val))) == right {
 			return true, ""
 		}
 		message := fmt.Sprintf("字符串 %v 字节数必须等于%v", val, right)
@@ -178,9 +178,9 @@ func StringLenBytes(right int) RuleFunc[string] {
 	}
 }
 
-func StringMinBytes(right int) RuleFunc[string] {
+func StringMinBytes(right uint64) RuleFunc[string] {
 	return func(val string) (bool, string) {
-		if len([]byte(val)) >= right {
+		if uint64(len([]byte(val))) >= right {
 			return true, ""
 		}
 		message := fmt.Sprintf("字符串 %v 字节数必须>=%v", val, right)
@@ -188,9 +188,9 @@ func StringMinBytes(right int) RuleFunc[string] {
 	}
 }
 
-func StringMaxBytes(right int) RuleFunc[string] {
+func StringMaxBytes(right uint64) RuleFunc[string] {
 	return func(val string) (bool, string) {
-		if len([]byte(val)) <= right {
+		if uint64(len([]byte(val))) <= right {
 			return true, ""
 		}
 		message := fmt.Sprintf("字符串 %v 字节数必须<=%v", val, right)
@@ -239,6 +239,16 @@ func StringContains(substr string) RuleFunc[string] {
 			return true, ""
 		}
 		message := fmt.Sprintf("字符串 %v 不包含 %v", val, substr)
+		return false, message
+	}
+}
+
+func StringNotContains(substr string) RuleFunc[string] {
+	return func(val string) (bool, string) {
+		if !strings.Contains(val, substr) {
+			return true, ""
+		}
+		message := fmt.Sprintf("字符串 %v 不应包含 %v", val, substr)
 		return false, message
 	}
 }
