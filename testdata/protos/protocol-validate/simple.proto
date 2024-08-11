@@ -16,12 +16,12 @@ message Protocol {
   required int32 int32_val = 3 [(validate.rules).int32.const = 10];
   required int64 int64_val = 4 [(validate.rules).int64.lt = 3, (validate.rules).int64.ignore_empty = true];
   required uint32 uint32_val = 5 [(validate.rules).uint32.lte = 7];
-//   required uint64 uint64_val = 6 [(validate.rules).uint64.gt = 10];
-//   required sint32 sint32_val = 7 [(validate.rules).sint32.gte = 23];
-//   required sint64 sint64_val = 8 [(validate.rules).sint64.in = 2];
-//   required fixed32 fixed32_val = 9 [(validate.rules).fixed32.not_in = 9];
-//   required fixed64 fixed64_val = 10 [(validate.rules).fixed64.const = 10];
-//   required sfixed32 sfixed32_val = 11 [(validate.rules).sfixed32.in = 10];
+  required uint64 uint64_val = 6 [(validate.rules).uint64.gt = 10];
+  required sint32 sint32_val = 7 [(validate.rules).sint32.gte = 23];
+  required sint64 sint64_val = 8 [(validate.rules).sint64.in = 2];
+  required fixed32 fixed32_val = 9 [(validate.rules).fixed32.not_in = 9];
+  required fixed64 fixed64_val = 10 [(validate.rules).fixed64.const = 10];
+  required sfixed32 sfixed32_val = 11 [(validate.rules).sfixed32.in = 10];
   required sfixed64 sfixed64_val = 12 [(validate.rules).sfixed64.in = 10];
   optional bool bool_val = 13 [(validate.rules).bool.const = false];
   required string string_val = 14 [(validate.rules).string = {
@@ -29,10 +29,10 @@ message Protocol {
     pattern: "^a{10,}$",
 
   }];
-  required bytes bytes_val = 15 [(validate.rules).bytes = {
-    const: "a",
-    min_len : 10,
-    pattern: "^a{10,}$",
+  // required bytes bytes_val = 15 [(validate.rules).bytes = {
+  //   const: "a",
+  //   min_len : 10,
+  //   pattern: "^a{10,}$",
 
-  }];
+  // }];
 }

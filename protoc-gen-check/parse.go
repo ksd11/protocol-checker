@@ -144,6 +144,12 @@ func handleString(value_any any, bool_rules protoreflect.ProtoMessage) (isValida
 	return validateRules(value_any.(string), rules)
 }
 
+func handleBytes(value_any any, bool_rules protoreflect.ProtoMessage) (isValidate bool, msg []string) {
+	isValidate = false
+	msg = append(msg, "bytes类型校验暂不支持")
+	return
+}
+
 func checkRule(f pgs.Field, rawData map[string]string) (isValidate bool, msg []string) {
 	isValidate = true
 	msg = []string{}
@@ -202,6 +208,8 @@ func checkRule(f pgs.Field, rawData map[string]string) (isValidate bool, msg []s
 		return handleBool(value_any, ruleContext.Rules)
 	case "string":
 		return handleString(value_any, ruleContext.Rules)
+	case "bytes":
+		return handleBytes(value_any, ruleContext.Rules)
 	default:
 		isValidate = false
 		msg = append(msg, fmt.Sprintf("不支持类型 %s", ruleContext.Typ))
